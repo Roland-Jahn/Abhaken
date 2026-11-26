@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rückmeldungen">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Rückmeldungen</title>
+<style>
+/* VOICE: ruhig, sachlich, Werkzeug für den Schulalltag
+   IDEA: Klassenbuch-Seite mit Rotstift für Überfälliges
+   PICTURE: die Liste „Heute dran“ selbst, direkt oben
+   COLOUR/TYPE: Papierweiß, Tinte dunkelblau, Rotstift, Bernstein für heute; Systemschrift (offline)
+   LAYOUT: eine Spalte, Tab-Leiste unten, Bottom-Sheets für Dialoge */
+:root{color-scheme:light dark;
+--bg:light-dark(#f6f5f1,#121316);--card:light-dark(#ffffff,#1d1f24);--ink:light-dark(#16192b,#eef0f4);
+--muted:light-dark(#646877,#9ba0ad);--line:light-dark(#e4e2db,#2d3038);
+--acc:light-dark(#1d3fbf,#7d9bff);--acc-soft:light-dark(#e8ecfb,#1e2847);
+--red:light-dark(#c7281f,#ff7a70);--red-soft:light-dark(#fcebea,#3a1f1e);
+--amb:light-dark(#9a5b00,#ffbe5c);--amb-soft:light-dark(#fff2dc,#3a2d16);
+--grn:light-dark(#21733a,#6fd08a);--grn-soft:light-dark(#e6f4ea,#193222)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;overflow-x:clip}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 10px) 18px 6px;max-width:680px;margin:0 auto}
+header h1{font-size:32px;line-height:1.05;margin:2px 0 4px;letter-spacing:-.01em}
+.back{border:0;background:none;color:var(--acc);font:inherit;font-size:17px;padding:6px 0;min-height:36px;cursor:pointer}
+main{padding:0 16px calc(96px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
+h2{font-size:14px;color:var(--muted);margin:22px 4px 8px;font-weight:600}
+h2.red{color:var(--red)}
+.card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);min-height:56px}
+.row:last-child{border-bottom:0}
+.grow{flex:1}
+.t{font-weight:600}
+.s{color:var(--muted);font-size:14px}
+.pill{display:inline-block;font-size:13px;font-weight:600;padding:2px 9px;border-radius:99px;margin-top:4px;white-space:nowrap}
+.red{color:var(--red)}.pill.red{background:var(--red-soft)}
+.pill.amb{background:var(--amb-soft);color:var(--amb)}
+.pill.acc{background:var(--acc-soft);color:var(--acc)}
+.pill.grn{background:var(--grn-soft);color:var(--grn)}
+.ghead{background:light-dark(#faf9f6,#22252b);padding:12px 14px;border-bottom:1px solid var(--line)}
+.ck{width:44px;height:44px;border-radius:50%;border:2px solid light-dark(#b9bcc6,#4a4e58);background:none;flex:none;cursor:pointer;color:transparent;font-size:20px;font-weight:700}
+.ck:active{background:var(--grn-soft)}
+.ck.done{background:var(--grn);border-color:var(--grn);color:#fff}
+.mo{border:0;background:none;color:var(--muted);font-size:24px;width:40px;height:44px;cursor:pointer;flex:none}
+.tap{cursor:pointer}.chev{color:var(--muted);font-size:20px}
+.cnt{font-size:13px;font-weight:600;border-radius:99px;padding:2px 9px;background:var(--acc-soft);color:var(--acc);white-space:nowrap}
+.cnt.red{background:var(--red-soft);color:var(--red)}
+.empty{color:var(--muted);text-align:center;padding:22px 14px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-size:30px;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+.form{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:14px;color:var(--muted);margin:16px 4px 6px;font-weight:600}
+input,select,textarea{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:100%;min-height:46px}
+textarea{min-height:110px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn{font:inherit;font-weight:600;border:0;border-radius:12px;padding:13px;min-height:48px;background:var(--acc);color:#fff;cursor:pointer;width:100%;margin-top:10px}
+.btn.sec{background:var(--acc-soft);color:var(--acc)}
+.btn.dan{background:var(--red-soft);color:var(--red)}
+.btn[disabled]{opacity:.45}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:9px 14px;min-height:42px;font:inherit;font-size:15px;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.box{width:26px;height:26px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700}
+.box.on{background:var(--acc);border-color:var(--acc)}
+.inl{display:flex;gap:8px}.inl .btn{width:auto;margin:0;padding:0 18px}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;border:0;background:none;padding:8px 0 7px;font:inherit;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-height:54px}
+nav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--acc)}
+nav .plus svg{background:var(--acc);stroke:#fff;border-radius:50%;padding:4px;width:30px;height:30px}
+.nb{position:relative}.nb i{position:absolute;top:-4px;right:-10px;background:var(--red);color:#fff;font-style:normal;font-size:11px;font-weight:700;border-radius:99px;padding:0 5px;line-height:17px}
+.shbg{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:680px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .18s ease-out}
+.sheet h3{margin:0 0 4px;font-size:20px}
+@keyframes up{from{transform:translateY(30px);opacity:.4}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom));background:#16192b;color:#fff;padding:10px 16px;border-radius:99px;font-size:15px;z-index:30;display:flex;gap:14px;align-items:center;max-width:92vw}
+.toast button{background:none;border:0;color:#a9bcff;font:inherit;font-weight:700;cursor:pointer}
+.its{display:flex;flex-direction:column;margin-top:6px;border-top:1px dashed var(--line)}
+.it{display:flex;align-items:center;gap:10px;border:0;border-bottom:1px dashed var(--line);background:none;font:inherit;font-size:15px;color:var(--ink);padding:6px 0;min-height:44px;text-align:left;cursor:pointer;width:100%}
+.it:last-child{border-bottom:0}.it .box{width:28px;height:28px;border-radius:50%;border-color:light-dark(#b9bcc6,#4a4e58)}
+.it .box.on{background:var(--grn);border-color:var(--grn)}
+.it.on .nm{color:var(--muted);text-decoration:line-through}
+details.dn{margin-top:18px}details.dn summary{font-weight:600;color:var(--grn);padding:12px 4px;min-height:44px;cursor:pointer;list-style-position:inside}
+.hint{font-size:14px;color:var(--muted);padding:6px 4px;line-height:1.5}
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+<main id="main"></main>
+<nav id="nav">
+ <button data-tab="heute"><span class="nb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><i id="badge" hidden></i></span>Heute</button>
+ <button data-tab="klassen"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17 14.3c2.3.2 3.9 1.8 4.5 4.4"/></svg>Klassen</button>
+ <button data-tab="neu" class="plus"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>Neu</button>
+ <button data-tab="erledigt"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>Erledigt</button>
+ <button data-tab="mehr"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Mehr</button>
+</nav>
+<script>
+{
+const KEY='rueckmeldungen-v1';
+const TYPES=['Unterschrift','Zettel / Formular','Rückmeldung','Krankmeldung','Attest','Berichtsheft'];
+const REP=[[0,'einmalig'],[1,'täglich'],[2,'alle 2 Tage'],[3,'alle 3 Tage'],[7,'wöchentlich']];
+const blank=()=>({classes:[],people:[],students:[],types:TYPES.slice(),tasks:[]});
+let S=load(),view={tab:'heute'},draft=null,toastT=null,classSort=(()=>{try{return localStorage.getItem('rm-sort')||'name'}catch(e){return'name'}})();
+
+function migrate(d){d.people=Array.isArray(d.people)?d.people:[];d.students.forEach(st=>{if(st.pid&&d.people.some(p=>p.id===st.pid))return;let p=d.people.find(p=>p.name.toLowerCase()===st.name.toLowerCase());if(!p){p={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:st.name,company:st.company||''};d.people.push(p)}else if(!p.company&&st.company)p.company=st.company;st.pid=p.id});return d}
+function load(){try{const r=localStorage.getItem(KEY);if(r)return migrate(Object.assign(blank(),JSON.parse(r)));}catch(e){}return blank();}
+let warned=false;
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('rueckmeldungen',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+function idbPut(v){idb().then(db=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,KEY)}).catch(()=>{})}
+function idbGet(){return idb().then(db=>new Promise(res=>{const r=db.transaction('kv').objectStore('kv').get(KEY);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null)})).catch(()=>null)}
+function save(){const j=JSON.stringify(S);try{localStorage.setItem(KEY,j);}catch(e){if(!warned){warned=true;toast('Speichern im Browser nicht möglich. Bitte Backup nutzen.');}}idbPut(j)}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=()=>iso(new Date());
+const hm=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const when=(d,t)=>fmt(d)+(t?', '+t+' Uhr':'');
+const pd=s=>{const[y,m,d]=s.split('-').map(Number);return[y,m,d]};
+const addDays=(s,n)=>{const[y,m,d]=pd(s);return iso(new Date(y,m-1,d+n))};
+const diff=(a,b)=>{const u=s=>{const[y,m,d]=pd(s);return Date.UTC(y,m-1,d)};return Math.round((u(a)-u(b))/864e5)};
+const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const fmt=s=>{const[y,m,d]=pd(s);return WD[new Date(y,m-1,d).getDay()]+', '+d+'.'+m+'.'};
+const rel=s=>{const d=diff(s,today());if(d===0)return'heute';if(d===1)return'morgen';if(d===-1)return'gestern';if(d>1&&d<7)return'in '+d+' Tagen';return fmt(s)};
+const stu=id=>S.students.find(x=>x.id===id);
+const cls=id=>S.classes.find(x=>x.id===id);
+const byName=(a,b)=>a.name.localeCompare(b.name,'de');
+const lastOf=n=>{const p=n.trim().split(/\s+/);return p.length>1?p[p.length-1]:p[0]};
+const lastFirst=n=>{const p=n.trim().split(/\s+/);return p.length>1?p[p.length-1]+', '+p.slice(0,-1).join(' '):n};
+const byLast=(a,b)=>lastOf(a.name).localeCompare(lastOf(b.name),'de')||a.name.localeCompare(b.name,'de');
+const per=id=>S.people.find(p=>p.id===id);
+const syncP=p=>S.students.filter(x=>x.pid===p.id).forEach(x=>{x.name=p.name;x.company=p.company});
+function getP(name,co){let p=S.people.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!p){p={id:uid(),name,company:co||''};S.people.push(p)}else if(co&&p.company!==co){p.company=co;syncP(p);p._upd=1}return p}
+function addMember(cid,p){if(!p||S.students.some(s=>s.classId===cid&&s.pid===p.id))return false;S.students.push({id:uid(),classId:cid,name:p.name,company:p.company||'',pid:p.id});return true}
+const memberOf=pid=>S.students.filter(s=>s.pid===pid).map(s=>cls(s.classId)).filter(Boolean).sort(byName);
+const firmsOf=cid=>{const m=new Map();S.students.filter(s=>s.classId===cid&&(s.company||'').trim()).sort(byName).forEach(s=>{const k=s.company.trim();if(!m.has(k))m.set(k,[]);m.get(k).push(s)});return[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'de'))};
+const repLabel=r=>(REP.find(x=>x[0]===+r)||[0,'alle '+r+' Tage'])[1];
+
+function status(t){
+ if(t.done)return{k:'done'};
+ const d=diff(today(),t.due),r=+t.repeat||0;
+ if(d<0)return{k:'upcoming'};
+ if(d===0)return{k:'today'};
+ if(r>0){if(d%r===0)return{k:'remind',n:d/r+1,late:d};return{k:'overdue',late:d,next:addDays(t.due,Math.ceil(d/r)*r)}}
+ return{k:'overdue',late:d};
+}
+function pill(t){
+ const s=status(t);
+ if(s.k==='done')return`<span class="pill grn">erledigt ${esc(when(t.done,t.doneAt))}</span>`;
+ if(s.k==='today')return`<span class="pill amb">heute fällig</span>`;
+ if(s.k==='remind')return`<span class="pill red">${s.n}. Erinnerung · seit ${s.late} ${s.late===1?'Tag':'Tagen'} offen</span>`;
+ if(s.k==='overdue')return`<span class="pill red">seit ${s.late} ${s.late===1?'Tag':'Tagen'} überfällig${s.next?' · erinnert '+esc(rel(s.next)):''}</span>`;
+ return`<span class="pill acc">fällig ${esc(rel(t.due))}</span>`;
+}
+const isNow=t=>{const k=status(t).k;return k==='today'||k==='remind'};
+const nowCount=()=>S.tasks.filter(t=>!t.done&&isNow(t)).length;
+
+/* ---------- Views ---------- */
+const multi=t=>Array.isArray(t.items)&&t.items.length>1;
+function itemsHtml(t){if(!multi(t))return'';const k=t.items.filter(x=>x.done).length;
+ return`<div class="its">${t.items.map((x,i)=>`<button class="it${x.done?' on':''}" data-a="itm" data-id="${t.id}" data-k="${i}"><span class="box${x.done?' on':''}">${x.done?'✓':''}</span><span class="grow"><span class="nm">${esc(x.name)}</span>${x.done?`<span class="s"> · erledigt ${esc(when(x.done,x.at))}</span>`:''}</span></button>`).join('')}</div>${!t.done&&k?`<span class="pill grn">${k} von ${t.items.length} abgehakt</span> `:''}`}
+function syncDone(t){if(!multi(t))return;if(t.items.every(x=>x.done)){const l=t.items.slice().sort((a,b)=>(a.done+(a.at||'')).localeCompare(b.done+(b.at||''))).pop();t.done=l.done;t.doneAt=l.at||''}else{t.done=null;t.doneAt=''}}
+function taskRow(t,showName){
+ const st=stu(t.studentId),c=st&&cls(st.classId);
+ const who=t.company?`${esc(t.company)}`:esc(st?st.name:'?'),resp=t.company?`verantwortlich: ${esc(st?st.name:'?')}`:'';
+ const head=showName?`<div class="tap" data-a="person" data-sid="${t.studentId}"><div class="t">${who} <span class="chev">›</span></div><div class="s">${resp?resp+' · ':''}${esc(c?c.name:'')} · ${esc(t.type)}${t.note?' · '+esc(t.note):''}</div></div>`
+  :`<div class="t">${esc(t.type)}${t.company?' · '+esc(t.company):''}</div>${t.note||t.company?`<div class="s">${t.company?'für den Betrieb verantwortlich':''}${t.company&&t.note?' · ':''}${esc(t.note||'')}</div>`:''}`;
+ return`<div class="row"><button class="ck${t.done?' done':''}" aria-label="erledigt" data-a="tog" data-id="${t.id}">✓</button><div class="grow">${head}${itemsHtml(t)}${pill(t)}</div><button class="mo" aria-label="bearbeiten" data-a="edit" data-id="${t.id}">⋯</button></div>`;
+}
+function groups(list){
+ const m=new Map();
+ list.forEach(t=>{const k=(t.batch||t.id)+'|'+t.due+'|'+t.type;if(!m.has(k))m.set(k,[]);m.get(k).push(t)});
+ return[...m.values()].map(g=>{
+  if(g.length===1)return`<div class="card" style="margin-bottom:8px">${taskRow(g[0],true)}</div>`;
+  const f=g[0],st=stu(f.studentId),c=st&&cls(st.classId);
+  const lbl=t=>t.company||stu(t.studentId)?.name||'?';
+  g.sort((a,b)=>lbl(a).localeCompare(lbl(b),'de'));
+  const fm=g.some(t=>t.company);
+  return`<div class="card" style="margin-bottom:8px"><div class="ghead"><div class="t">${esc(f.type)} · ${esc(c?c.name:'')}</div>${f.note?`<div class="s">${esc(f.note)}</div>`:''}<div class="s">${g.length} ${fm?'Betriebe':'Personen'} noch offen</div>${pill(f)}</div>`+
+   g.map(t=>`<div class="row"><button class="ck" aria-label="erledigt" data-a="tog" data-id="${t.id}">✓</button><div class="grow"><div class="tap" data-a="person" data-sid="${t.studentId}"><div class="t">${esc(lbl(t))} <span class="chev">›</span></div>${t.company?`<div class="s">verantwortlich: ${esc(stu(t.studentId)?.name||'?')}</div>`:''}</div>${itemsHtml(t)}</div><button class="mo" aria-label="bearbeiten" data-a="edit" data-id="${t.id}">⋯</button></div>`).join('')+`</div>`;
+ }).join('');
+}
+function openPts(t){return multi(t)?t.items.filter(x=>!x.done).map(x=>x.name):[t.type]}
+function byPerson(list){const m=new Map();list.forEach(t=>{if(!m.has(t.studentId))m.set(t.studentId,[]);m.get(t.studentId).push(t)});
+ const rows=[...m.entries()].map(([sid,ts])=>{const s=stu(sid),c=s&&cls(s.classId);ts.sort((a,b)=>a.due.localeCompare(b.due));const pts=ts.flatMap(openPts),cos=[...new Set(ts.map(t=>t.company).filter(Boolean))];
+  return{n:s?s.name:'?',d:ts[0].due,h:`<div class="row tap" data-a="person" data-sid="${sid}"><div class="grow"><div class="t">${esc(s?s.name:'?')}</div><div class="s">${esc(c?c.name:'')}${cos.length?' · für '+esc(cos.join(', ')):''} · ${pts.length} offen: ${esc(pts.join(', '))}</div><span class="pill acc">nächste Fälligkeit ${esc(rel(ts[0].due))}</span></div><span class="cnt">${pts.length}</span><span class="chev">›</span></div>`}});
+ rows.sort((a,b)=>a.d.localeCompare(b.d)||a.n.localeCompare(b.n,'de'));
+ return`<div class="card">${rows.map(r=>r.h).join('')}</div>`}
+function vHeute(){
+ if(!S.classes.length)return`<div class="card" style="margin-top:10px"><div class="empty"><b>Willkommen!</b><br>Lege zuerst eine Klasse mit Namen an. Danach trägst du ein, wer bis wann was vorlegen muss.</div><div style="padding:0 14px 14px"><button class="btn" data-a="go" data-tab="klassen">Erste Klasse anlegen</button></div></div>`;
+ const open=S.tasks.filter(t=>!t.done),now=[],over=[],soon=[];
+ open.forEach(t=>{const k=status(t).k;if(k==='today'||k==='remind')now.push(t);else if(k==='overdue')over.push(t);else soon.push(t)});
+ const srt=(a,b)=>a.due.localeCompare(b.due);[now,over,soon].forEach(l=>l.sort(srt));
+ const later=0;
+ return`<div class="s" style="padding:0 4px">${esc(fmt(today()))}</div>
+ <div class="stats"><div class="stat"><b class="${now.length?'red':''}">${now.length}</b><span>heute nachhaken</span></div><div class="stat"><b>${over.length}</b><span>weitere überfällig</span></div><div class="stat"><b>${open.length}</b><span>offen gesamt</span></div></div>
+ <h2 class="${now.length?'red':''}">Heute dran</h2>${now.length?groups(now):`<div class="card"><div class="empty">Heute ist nichts fällig.</div></div>`}
+ ${over.length?`<h2>Überfällig, nächste Erinnerung später</h2>${groups(over)}`:''}
+ ${soon.length?`<h2>Demnächst fällig, vorzeitig abhakbar</h2>${byPerson(soon)}`:''}
+ ${later?`<p class="hint">Dazu ${later} spätere Einträge.</p>`:''}
+ ${!open.length?`<p class="hint">Alles erledigt. Neue Einträge legst du unten mit „Neu“ an.</p>`:''}`;
+}
+let pick=null;
+function pickAvail(){const q=pick.q.toLowerCase();return S.people.filter(p=>!S.students.some(s=>s.classId===pick.cid&&s.pid===p.id)).filter(p=>!pick.from||S.students.some(s=>s.classId===pick.from&&s.pid===p.id)).filter(p=>!q||p.name.toLowerCase().includes(q)||(p.company||'').toLowerCase().includes(q)).sort(byName)}
+function pickBody(){const av=pickAvail(),all=av.length&&av.every(p=>pick.sel.includes(p.id)),others=S.classes.filter(c=>c.id!==pick.cid).sort(byName);
+ return`${others.length?`<div class="lab">Aus Klasse/Kurs</div><div class="chips"><button class="chip${!pick.from?' on':''}" data-a="pkFrom">Alle</button>${others.map(c=>`<button class="chip${pick.from===c.id?' on':''}" data-a="pkFrom" data-cid="${c.id}">${esc(c.name)}</button>`).join('')}</div>`:''}
+ <div class="card" style="margin-top:10px">${av.length?`<div class="row tap" data-a="pkAll"><span class="box${all?' on':''}">${all?'✓':''}</span><div class="grow t">Alle angezeigten (${av.length})</div></div>`+av.map(p=>{const on=pick.sel.includes(p.id),m=memberOf(p.id).map(c=>c.name).join(', ');return`<div class="row tap" data-a="pkSel" data-pid="${p.id}"><span class="box${on?' on':''}">${on?'✓':''}</span><div class="grow"><div>${esc(p.name)}</div><div class="s">${[p.company,m].filter(Boolean).map(esc).join(' · ')||'noch in keinem Kurs'}</div></div></div>`}).join(''):'<div class="empty">Keine passenden Namen.</div>'}</div>
+ <button class="btn" data-a="pkGo" ${pick.sel.length?'':'disabled'}>${pick.sel.length?pick.sel.length+(pick.sel.length===1?' Person':' Personen')+' zuordnen':'Bitte Namen auswählen'}</button><button class="btn sec" data-a="close">Abbrechen</button>`}
+function pickRefresh(){const b=document.getElementById('pickBody');if(b)b.innerHTML=pickBody()}
+function allList(q){q=(q||'').toLowerCase();const ps=S.people.filter(p=>!q||p.name.toLowerCase().includes(q)||(p.company||'').toLowerCase().includes(q)).sort(byName);
+ return ps.length?`<div class="card">${ps.map(p=>{const m=memberOf(p.id).map(c=>c.name).join(', ');return`<div class="row tap" data-a="pOpen" data-pid="${p.id}"><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${[p.company,m||'in keinem Kurs'].filter(Boolean).map(esc).join(' · ')}</div></div><span class="chev">›</span></div>`}).join('')}</div>`:'<div class="card"><div class="empty">Keine Namen gefunden.</div></div>'}
+function vAlle(){return`<p class="hint">Jeder Name steht hier nur einmal. Name und Betrieb gelten in allen Klassen und Kursen. Tippe auf einen Namen, um ihn Kursen zuzuordnen.</p><input id="allQ" placeholder="Name oder Betrieb suchen" autocomplete="off"><div id="allList" style="margin-top:10px">${allList('')}</div>
+ <h2>Namen nur in die Gesamtliste aufnehmen</h2><textarea id="newStudents" placeholder="Firma Bosch&#10;Anna Becker&#10;Ben Schmidt"></textarea>${micBtn()}<div id="nsPrev"></div><button class="btn sec" data-a="addPeople" id="nsBtn">Namen übernehmen</button>`}
+function pSheet(pid){const p=per(pid);if(!p){closeSheet();return}const all=[...new Set(S.people.map(x=>(x.company||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+ sheet(`<h3>${esc(p.name)}</h3><div class="lab">Name</div><input id="pName" value="${esc(p.name)}" autocomplete="off"><div class="lab">Betrieb</div><input id="pCo" list="pCoL" value="${esc(p.company||'')}" autocomplete="off"><datalist id="pCoL">${all.map(c=>`<option value="${esc(c)}">`).join('')}</datalist><button class="btn" data-a="pSave" data-pid="${p.id}">Speichern</button>
+ <div class="lab">In diesen Klassen und Kursen (antippen zum Zuordnen oder Entfernen)</div><div class="chips">${S.classes.slice().sort(byName).map(c=>{const on=S.students.some(s=>s.classId===c.id&&s.pid===p.id);return`<button class="chip${on?' on':''}" data-a="pTog" data-pid="${p.id}" data-cid="${c.id}">${on?'✓ ':''}${esc(c.name)}</button>`}).join('')||'<span class="hint">Noch keine Klasse angelegt.</span>'}</div>
+ <button class="btn dan" data-a="pDel" data-pid="${p.id}" style="margin-top:20px">Ganz löschen</button><button class="btn sec" data-a="close">Schließen</button>`,'p')}
+let dict=null,listening=false;
+function micBtn(){return dict?`<button class="btn sec" id="micBtn" data-a="mic" style="margin-top:8px">${listening?'● Hört zu … zum Beenden tippen':'🎤 Namen diktieren'}</button>`:''}
+function micUi(){const b=document.getElementById('micBtn');if(b){b.textContent=listening?'● Hört zu … zum Beenden tippen':'🎤 Namen diktieren';b.classList.toggle('dan',listening);b.classList.toggle('sec',!listening)}}
+function appendDict(t){const ta=document.getElementById('newStudents');if(!ta||!t)return;const v=ta.value;ta.value=v+(v&&!/\s$/.test(v)?' ':'')+t.trim();nsPreview()}
+try{window.claude&&window.claude.use&&window.claude.use('dictation').then(d=>{if(!d)return;dict=d;
+ d.onFinal(({text})=>appendDict(text));
+ d.onState(({state})=>{listening=state==='listening';micUi()});render()}).catch(()=>{})}catch(e){}
+function vKlassen(){
+ const list=S.classes.slice().sort(byName).map(c=>{
+  const ids=new Set(S.students.filter(s=>s.classId===c.id).map(s=>s.id));
+  const op=S.tasks.filter(t=>!t.done&&ids.has(t.studentId)),late=op.filter(t=>status(t).k!=='upcoming').length;
+  return`<div class="row tap" data-a="go" data-tab="klassen" data-cid="${c.id}"><div class="grow"><div class="t">${esc(c.name)}</div><div class="s">${ids.size} Lernende</div></div>${late?`<span class="cnt red">${late} fällig</span>`:''}${op.length?`<span class="cnt">${op.length} offen</span>`:''}<span class="chev">›</span></div>`}).join('');
+ return`<div class="card" style="margin-bottom:14px"><div class="row tap" data-a="goAll"><div class="grow"><div class="t">Alle Namen</div><div class="s">Gesamtliste für alle Klassen und Kurse</div></div><span class="cnt">${S.people.length}</span><span class="chev">›</span></div></div>${list?`<div class="card">${list}</div>`:`<div class="card"><div class="empty">Noch keine Klasse.</div></div>`}
+ <div class="lab">Neue Klasse oder neuer Kurs</div><div class="inl"><input id="newClass" placeholder="z. B. 11 IM 2" autocomplete="off"><button class="btn" data-a="addClass">Anlegen</button></div>`;
+}
+const cap=w=>w.replace(/(^|[\s-])(\p{Ll})/gu,(m,a,b)=>a+b.toUpperCase());
+function parseNames(txt){txt=txt.replace(/\s*\b(?:neue|nächste)\s+zeile\b[.,]?\s*/gi,'\n');const out=[];let cur='';
+ txt.split(/\r?\n|\.\s+|\.$/).map(l=>l.trim().replace(/^[-•*\d.)\s]+/,'').replace(/[.,;:\s]+$/,'')).filter(Boolean).forEach(l=>{
+  let m=l.match(/^(?:betrieb|firma|ausbildungsbetrieb)\s*:?\s*(.+)$/i);if(m){cur=cap(m[1].trim());return}
+  let name=l,co=cur;const p=l.split(/\t|;/).map(x=>x.trim()).filter(Boolean);
+  if(p.length>=2){name=p[0];co=p[1]}else if(m=l.match(/^(.+?)\s+(?:betrieb|firma|bei)\s*:?\s+(.+)$/i)){name=m[1];co=cap(m[2].trim())}
+  name=cap(name.replace(/\s+/g,' ').trim());if(name)out.push({name,co})});
+ return out}
+function nsPreview(){const el=document.getElementById('nsPrev');if(!el)return;const ps=parseNames(document.getElementById('newStudents').value);
+ document.getElementById('nsBtn').textContent=ps.length?ps.length+(ps.length===1?' Namen':' Namen')+' übernehmen':'Namen übernehmen';
+ el.innerHTML=ps.length?`<div class="lab">Vorschau: ${ps.length} erkannt</div><div class="card">${ps.map(p=>`<div class="row" style="min-height:44px"><div class="grow t">${esc(p.name)}</div><div class="s">${p.co?esc(p.co):'ohne Betrieb'}</div></div>`).join('')}</div>`:''}
+function vKlasse(c){
+ const sts=S.students.filter(s=>s.classId===c.id).sort(classSort==='nach'?byLast:byName),firms=firmsOf(c.id),noCo=sts.filter(s=>!(s.company||'').trim());
+ const cnt=s=>{const op=S.tasks.filter(t=>!t.done&&t.studentId===s.id),late=op.filter(t=>status(t).k!=='upcoming').length;return`${late?`<span class="cnt red">${late} fällig</span>`:''}${op.length?`<span class="cnt">${op.length} offen</span>`:''}`};
+ const srow=(s,sub)=>`<div class="row tap" data-a="go" data-tab="klassen" data-cid="${c.id}" data-sid="${s.id}"><div class="grow"><div class="t">${esc(classSort==='nach'?lastFirst(s.name):s.name)}</div>${sub&&s.company?`<div class="s">${esc(s.company)}</div>`:''}</div>${cnt(s)}<span class="chev">›</span></div>`;
+ let list='';
+ if(classSort==='firma'){list=firms.map(([co,ss])=>`<h2>${esc(co)} · ${ss.length}</h2><div class="card">${ss.slice().sort(byName).map(s=>srow(s,false)).join('')}</div>`).join('')+(noCo.length?`<h2>Ohne Betrieb · ${noCo.length}</h2><div class="card">${noCo.map(s=>srow(s,false)).join('')}</div>`:'')}
+ else list=`<div class="card" style="margin-top:8px">${sts.map(s=>srow(s,true)).join('')}</div>`;
+ const av=S.people.filter(p=>!sts.some(s=>s.pid===p.id)).length;
+ return`${av?`<button class="btn ${sts.length?'sec':''}" data-a="pick" data-cid="${c.id}">Aus Gesamtliste zuordnen (${av} verfügbar)</button>`:''}${sts.length?`<button class="btn" data-a="newFor" data-cid="${c.id}">Eintrag pro Person</button>${firms.length?`<button class="btn sec" data-a="newFor" data-cid="${c.id}" data-mode="firma">Eintrag pro Betrieb (${firms.length} Betriebe)</button>`:''}
+ <h2>${sts.length} Lernende · ${firms.length} Betriebe</h2><div class="chips"><span class="s" style="align-self:center">Sortieren:</span>${[['name','Vorname'],['nach','Nachname'],['firma','Betrieb']].map(([v,l])=>`<button class="chip${classSort===v?' on':''}" data-a="cSort" data-v="${v}">${l}</button>`).join('')}</div>${list}`:`<div class="card"><div class="empty">Noch keine Namen in dieser Klasse.</div></div>`}
+ <h2>Namen hinzufügen</h2><div class="card" style="padding:12px 14px"><div class="t">Per Sprache: ins Feld tippen, dann das 🎤 auf der Tastatur</div><div class="s" style="margin-top:4px">Sprich zuerst den Betrieb, dann die Namen, jeweils mit „neue Zeile“:<br><i>„Firma Bosch neue Zeile Anna Becker neue Zeile Ben Schmidt neue Zeile Firma Heine neue Zeile Can Yilmaz“</i></div><div class="s" style="margin-top:6px">Auch möglich: „Anna Becker <i>Firma</i> Bosch“ in einer Zeile, Name; Betrieb, eine kopierte Excel-Liste oder ein mit Live Text kopiertes Foto der Klassenliste. Vorhandene Namen bekommen so den Betrieb nachgetragen.</div></div><textarea id="newStudents" style="margin-top:8px" placeholder="Firma Bosch&#10;Anna Becker&#10;Ben Schmidt&#10;Firma Heine&#10;Can Yilmaz"></textarea>${micBtn()}<div id="nsPrev"></div><button class="btn" data-a="addStudents" data-cid="${c.id}" id="nsBtn">Namen übernehmen</button>
+ <h2>Klasse / Kurs</h2><button class="btn sec" data-a="renClass" data-cid="${c.id}">Umbenennen</button><button class="btn dan" data-a="delClass" data-cid="${c.id}">Klasse löschen</button>`;
+}
+function vSchueler(s){
+ const ts=S.tasks.filter(t=>t.studentId===s.id),op=ts.filter(t=>!t.done).sort((a,b)=>a.due.localeCompare(b.due)),dn=ts.filter(t=>t.done).sort((a,b)=>b.done.localeCompare(a.done));
+ return`<div class="s" style="padding:0 4px">${esc(cls(s.classId)?.name||'')} · ${s.company?'Betrieb: '+esc(s.company):'kein Betrieb eingetragen'}</div><button class="btn" data-a="newFor" data-cid="${s.classId}" data-sid="${s.id}">Eintrag für ${esc(s.name)}</button>
+ <h2>Offen</h2>${op.length?`<div class="card">${op.map(t=>taskRow(t,false)).join('')}</div>`:`<div class="card"><div class="empty">Nichts offen.</div></div>`}
+ ${dn.length?`<h2>Erledigt</h2><div class="card">${dn.map(t=>taskRow(t,false)).join('')}</div>`:''}
+ <h2>Person</h2><button class="btn sec" data-a="coEdit" data-sid="${s.id}">${s.company?'Betrieb ändern':'Betrieb zuordnen'}</button><button class="btn sec" data-a="renStu" data-sid="${s.id}">Umbenennen</button><button class="btn sec" data-a="pOpen" data-pid="${s.pid}">Weitere Kurse zuordnen</button><button class="btn dan" data-a="delStu" data-sid="${s.id}">Aus diesem Kurs entfernen</button>`;
+}
+function coSheet(s){
+ const all=[...new Set(S.students.map(x=>(x.company||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+ const own=firmsOf(s.classId).map(f=>f[0]);
+ sheet(`<h3>Betrieb von ${esc(s.name)}</h3>${own.length?`<div class="lab">Betriebe in dieser Klasse</div><div class="chips">${own.map(co=>`<button class="chip${co===s.company?' on':''}" data-a="coPick" data-co="${esc(co)}">${esc(co)}</button>`).join('')}</div>`:''}
+ <div class="lab">Betrieb</div><input id="coIn" list="coList" value="${esc(s.company||'')}" placeholder="z. B. Bosch Rexroth" autocomplete="off"><datalist id="coList">${all.map(co=>`<option value="${esc(co)}">`).join('')}</datalist>
+ <button class="btn" data-a="coSave" data-sid="${s.id}">Speichern</button><button class="btn sec" data-a="close">Abbrechen</button>`);
+}
+function firmfirms(){draft.firms={};firmsOf(draft.cid).forEach(([co,ss])=>draft.firms[co]=ss[0].id)}
+function newDraft(cid,sid,mode){draft={cid:cid||(S.classes.slice().sort(byName)[0]||{}).id,mode:mode||'person',sel:sid?[sid]:[],firms:{},types:[],editTypes:false,custom:'',note:'',due:addDays(today(),7),repeat:2}}
+function vNeu(){
+ if(!S.classes.length)return`<div class="card"><div class="empty">Lege zuerst unter „Klassen“ eine Klasse mit Namen an.</div></div>`;
+ if(!draft||!cls(draft.cid))newDraft();
+ const fm=draft.mode==='firma';
+ const sts=S.students.filter(s=>s.classId===draft.cid).sort(byName),all=sts.length&&sts.every(s=>draft.sel.includes(s.id));
+ const firms=firmsOf(draft.cid),allF=firms.length&&firms.every(([co])=>draft.firms[co]),noCo=sts.filter(s=>!(s.company||'').trim()).length;
+ const n=fm?Object.keys(draft.firms).length:draft.sel.length,qd=[[1,'Morgen'],[3,'In 3 Tagen'],[7,'In 1 Woche'],[14,'In 2 Wochen']];
+ let who;
+ if(!sts.length)who=`<div class="card"><div class="empty">Diese Klasse hat noch keine Namen.</div></div>`;
+ else if(!fm)who=`<div class="card"><div class="row tap" data-a="dAll"><span class="box${all?' on':''}">${all?'✓':''}</span><div class="grow t">Ganze Klasse</div></div>${sts.map(s=>{const on=draft.sel.includes(s.id);return`<div class="row tap" data-a="dSel" data-sid="${s.id}"><span class="box${on?' on':''}">${on?'✓':''}</span><div class="grow">${esc(s.name)}${s.company?`<div class="s">${esc(s.company)}</div>`:''}</div></div>`}).join('')}</div>`;
+ else if(!firms.length)who=`<div class="card"><div class="empty">In dieser Klasse ist noch kein Betrieb eingetragen. Trage die Betriebe unter „Klassen“ ein.</div></div>`;
+ else who=`<p class="hint">Pro Betrieb gibt es einen Eintrag. Wähle, wer ihn mitbringt.</p><div class="card"><div class="row tap" data-a="dAllF"><span class="box${allF?' on':''}">${allF?'✓':''}</span><div class="grow t">Alle Betriebe</div></div>${firms.map(([co,ss])=>{const on=!!draft.firms[co];return`<div class="row tap" data-a="dFirm" data-co="${esc(co)}"><span class="box${on?' on':''}">${on?'✓':''}</span><div class="grow"><div class="t">${esc(co)}</div><div class="s">${ss.length} ${ss.length===1?'Person':'Personen'}${!on?': '+esc(ss.map(s=>s.name).join(', ')):''}</div></div></div>${on?`<div class="row" style="padding-left:52px"><span class="s" style="white-space:nowrap">Verantwortlich</span><select data-resp="${esc(co)}">${ss.map(s=>`<option value="${s.id}"${draft.firms[co]===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}`}).join('')}</div>${noCo?`<p class="hint">${noCo} ${noCo===1?'Person ist':'Personen sind'} keinem Betrieb zugeordnet und erscheinen hier nicht.</p>`:''}`;
+ return`<div class="lab" style="margin-top:6px">Was muss vorgelegt werden? (${draft.types.length} gewählt, mehrere möglich)</div><div class="chips">${S.types.map((t,i)=>draft.editTypes?`<button class="chip" data-a="dDelType" data-i="${i}" aria-label="${esc(t)} löschen">${esc(t)} <span class="red">✕</span></button>`:`<button class="chip${draft.types.includes(t)?' on':''}" data-a="dType" data-i="${i}">${draft.types.includes(t)?'✓ ':''}${esc(t)}</button>`).join('')||'<span class="hint">Noch keine Vorschläge. Füge unten eigene hinzu.</span>'}</div>
+ ${S.types.length?`<button class="back" data-a="dEditTypes" style="font-size:15px">${draft.editTypes?'Fertig':'Vorschläge bearbeiten oder löschen'}</button>`:''}
+ <div class="inl" style="margin-top:6px"><input id="dCustom" placeholder="Eigener Text, z. B. Rückmeldeblatt Ausbilder" value="${esc(draft.custom)}" autocomplete="off"><button class="btn sec" data-a="dAddType" aria-label="hinzufügen">+</button></div><p class="hint" style="margin:0">Mit + wird der Text ausgewählt und als Vorschlag gespeichert.</p>
+ <div class="lab">Klasse</div><div class="chips">${S.classes.slice().sort(byName).map(c=>`<button class="chip${c.id===draft.cid?' on':''}" data-a="dCls" data-cid="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+ <div class="lab">Rückmeldung pro …</div><div class="chips"><button class="chip${!fm?' on':''}" data-a="dMode" data-v="person">Person</button><button class="chip${fm?' on':''}" data-a="dMode" data-v="firma">Betrieb</button></div>
+ <div class="lab">${fm?'Welche Betriebe?':'Wer?'} (${n} ausgewählt)</div>${who}
+ <div class="lab">Notiz (optional)</div><input id="dNote" placeholder="z. B. Elternbrief Exkursion" value="${esc(draft.note)}" autocomplete="off">
+ <div class="lab">Stichtag: an diesem Tag erscheint der Eintrag unter „Heute dran“</div><input type="date" id="dDue" value="${draft.due}">
+ <div class="chips" style="margin-top:8px">${qd.map(([d,l])=>`<button class="chip${draft.due===addDays(today(),d)?' on':''}" data-a="dDue" data-d="${d}">${l}</button>`).join('')}</div>
+ <div class="lab">Falls noch offen, erneut erinnern</div><div class="chips">${REP.map(([v,l])=>`<button class="chip${+draft.repeat===v?' on':''}" data-a="dRep" data-v="${v}">${l}</button>`).join('')}</div>
+ <button class="btn" data-a="dSave" ${n?'':'disabled'} style="margin-top:22px">${n?`Für ${n} ${fm?(n===1?'Betrieb':'Betriebe'):(n===1?'Person':'Personen')} anlegen`:(fm?'Bitte Betriebe auswählen':'Bitte Personen auswählen')}</button>`;
+}
+function vErledigt(){
+ const dn=S.tasks.filter(t=>t.done).sort((a,b)=>b.done.localeCompare(a.done));
+ if(!dn.length)return`<div class="card"><div class="empty">Noch nichts erledigt.</div></div>`;
+ const old=dn.filter(t=>diff(today(),t.done)>30).length;
+ return`<p class="hint">Tippe auf ✓, um einen Eintrag wieder zu öffnen.</p><div class="card">${dn.slice(0,150).map(t=>taskRow(t,true)).join('')}</div>${old?`<button class="btn dan" data-a="purge">${old} Einträge älter als 30 Tage löschen</button>`:''}`;
+}
+function vMehr(){
+ return`<h2>Arten von Rückmeldungen</h2><div class="card">${S.types.map((t,i)=>`<div class="row"><div class="grow">${esc(t)}</div><button class="mo" aria-label="entfernen" data-a="delType" data-i="${i}">✕</button></div>`).join('')||'<div class="empty">Keine Arten.</div>'}</div>
+ <div class="inl" style="margin-top:8px"><input id="newType" placeholder="Neue Art, z. B. Einverständniserklärung" autocomplete="off"><button class="btn" data-a="addType">+</button></div>
+ <h2>Datensicherung</h2><p class="hint">Alle Daten liegen nur auf diesem Gerät, doppelt gespeichert. App immer über das Home-Symbol öffnen und das Symbol nicht löschen. Mach regelmäßig ein Backup.${S.lastBackup?" Letztes Backup: "+esc(fmt(S.lastBackup))+".":" Noch kein Backup gemacht."}</p>
+ <button class="btn sec" data-a="export">Backup erstellen</button><button class="btn sec" data-a="import">Backup einspielen</button>
+ <h2>Auf den Home-Bildschirm</h2><p class="hint">In Safari auf Teilen tippen, dann „Zum Home-Bildschirm“. Die App öffnet sich dann wie eine normale App. Hinweis: Pop-ups kommen nicht von selbst, die Übersicht „Heute dran“ zeigt dir beim Öffnen, wo du nachhaken musst. Die Zahl am Tab „Heute“ zeigt die fälligen Einträge.</p>
+ <h2>Datenschutz</h2><p class="hint">Hier stehen Namen von Lernenden und ggf. Krankmeldungen. Gerät mit Code sperren, keine Diagnosen eintragen, erledigte Einträge regelmäßig löschen.</p>
+ <button class="btn dan" data-a="wipe">Alle Daten löschen</button>`;
+}
+
+/* ---------- Render ---------- */
+function render(){
+ const h=document.getElementById('hdr'),m=document.getElementById('main');let title='',back='',html='';
+ if(view.tab==='heute'){title='Heute dran';html=vHeute()}
+ else if(view.tab==='klassen'){
+  const s=view.sid&&stu(view.sid),c=view.cid&&cls(view.cid);
+  if(s){title=s.name;back=`<button class="back" data-a="go" data-tab="klassen" data-cid="${s.classId}">‹ ${esc(cls(s.classId)?.name||'Klasse')}</button>`;html=vSchueler(s)}
+  else if(c){title=c.name;back=`<button class="back" data-a="go" data-tab="klassen">‹ Klassen</button>`;html=vKlasse(c)}
+  else if(view.all){title='Alle Namen';back=`<button class="back" data-a="go" data-tab="klassen">‹ Klassen</button>`;html=vAlle()}
+  else{title='Klassen & Kurse';html=vKlassen()}}
+ else if(view.tab==='neu'){title='Neuer Eintrag';html=vNeu()}
+ else if(view.tab==='erledigt'){title='Erledigt';html=vErledigt()}
+ else{title='Einstellungen';html=vMehr()}
+ h.innerHTML=back+`<h1>${esc(title)}</h1>`;m.innerHTML=html;
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===view.tab));
+ const n=nowCount(),bd=document.getElementById('badge');bd.hidden=!n;bd.textContent=n;
+ document.title=(n?'('+n+') ':'')+'Rückmeldungen';
+ const sh=document.getElementById('sheet');if(sh&&sh.dataset.kind==='person'&&psid){if(stu(psid)){const b=sh.querySelector('.sheet'),y=b.scrollTop,o=b.querySelector('details.dn')?.open;b.innerHTML=personHtml(psid);const dd=b.querySelector('details.dn');if(dd&&o)dd.open=true;b.scrollTop=y}else closeSheet()}
+}
+function go(v){if(listening&&dict)dict.stop().catch(()=>{});view=v;render();window.scrollTo(0,0)}
+
+/* ---------- Sheets & Toast ---------- */
+function sheet(html,kind){closeSheet();const bg=document.createElement('div');bg.className='shbg';bg.id='sheet';bg.dataset.kind=kind||'';bg.innerHTML=`<div class="sheet" role="dialog">${html}</div>`;bg.addEventListener('click',e=>{if(e.target===bg)closeSheet()});document.body.appendChild(bg);bg.querySelector('.sheet').addEventListener('click',e=>{e.stopPropagation();onClick(e)});bg.querySelector('.sheet').addEventListener('input',e=>{if(e.target.id==='pickQ'&&pick){pick.q=e.target.value;pickRefresh()}})}
+let psid=null;
+function personHtml(sid){const s=stu(sid);if(!s)return'';const c=cls(s.classId);
+ const ts=S.tasks.filter(t=>t.studentId===sid),open=[],done=[];
+ ts.forEach(t=>{const ctx=[t.company?'für '+t.company:'',t.note].filter(Boolean).join(' · ');
+  const pts=multi(t)?t.items.map((x,k)=>({t,k,name:x.name,done:x.done,at:x.at,ctx})):[{t,k:null,name:t.type,done:t.done,at:t.doneAt,ctx:[t.company?'für '+t.company:'',t.note].filter(Boolean).join(' · ')}];
+  pts.forEach(p=>(p.done?done:open).push(p))});
+ open.sort((a,b)=>a.t.due.localeCompare(b.t.due));done.sort((a,b)=>(b.done+(b.at||'')).localeCompare(a.done+(a.at||'')));
+ const row=p=>`<div class="row"><button class="ck${p.done?' done':''}" aria-label="${p.done?'wieder öffnen':'abhaken'}" data-a="${p.k==null?'tog':'itm'}" data-id="${p.t.id}"${p.k==null?'':` data-k="${p.k}"`}>✓</button><div class="grow"><div class="t">${esc(p.name)}</div>${p.ctx?`<div class="s">${esc(p.ctx)}</div>`:''}${p.done?`<span class="pill grn">erledigt ${esc(when(p.done,p.at))}</span>`:pill(p.t)}</div><button class="mo" aria-label="bearbeiten" data-a="edit" data-id="${p.t.id}">⋯</button></div>`;
+ return`<h3>${esc(s.name)}</h3><p class="hint" style="margin:0">${esc(c?c.name:'')}${s.company?' · '+esc(s.company):''}</p>
+ <h2>Offen (${open.length})</h2>${open.length?`<div class="card">${open.map(row).join('')}</div>`:`<div class="card"><div class="empty">Alles erledigt.</div></div>`}
+ ${done.length?`<details class="dn"><summary>Abgehakt (${done.length})</summary><div class="card">${done.slice(0,40).map(row).join('')}</div></details>`:''}
+ <button class="btn sec" data-a="go" data-tab="klassen" data-cid="${s.classId}" data-sid="${s.id}">Alle Details zur Person</button><button class="btn" data-a="close">Schließen</button>`}
+function personSheet(sid){sheet(personHtml(sid),'person');psid=sid}
+function closeSheet(){document.getElementById('sheet')?.remove()}
+let pending=null;
+function ask(title,text,ok,cb,danger,input){pending=cb;sheet(`<h3>${esc(title)}</h3>${text?`<p class="hint">${esc(text)}</p>`:''}${input!=null?`<input id="askIn" value="${esc(input)}" autocomplete="off">`:''}<button class="btn${danger?' dan':''}" data-a="askOk">${esc(ok)}</button><button class="btn sec" data-a="close">Abbrechen</button>`);if(input!=null)setTimeout(()=>document.getElementById('askIn')?.focus(),50)}
+function toast(msg,undo){document.querySelector('.toast')?.remove();clearTimeout(toastT);const d=document.createElement('div');d.className='toast';d.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Rückgängig</button>':''}`;if(undo)d.querySelector('button').onclick=()=>{undo();d.remove()};document.body.appendChild(d);toastT=setTimeout(()=>d.remove(),4000)}
+
+function editTask(t){
+ const st=stu(t.studentId);
+ sheet(`<h3>${esc(t.company||st?.name||'')}</h3><p class="hint">${esc(cls(st?.classId)?.name||'')} · ${esc(t.type)}</p>${pill(t)}
+ ${t.company?`<div class="lab">Verantwortlich für ${esc(t.company)}</div><select id="eResp">${(()=>{const f=firmsOf(st?.classId).find(x=>x[0]===t.company);const ss=f?f[1]:(st?[st]:[]);if(st&&!ss.includes(st))ss.unshift(st);return ss.map(x=>`<option value="${x.id}"${x.id===t.studentId?' selected':''}>${esc(x.name)}</option>`).join('')})()}</select>`:''}
+ <div class="lab">Notiz</div><input id="eNote" value="${esc(t.note||'')}" autocomplete="off">
+ <div class="lab">Stichtag</div><input type="date" id="eDue" value="${t.due}">
+ <div class="lab">Erneut erinnern</div><select id="eRep">${REP.map(([v,l])=>`<option value="${v}"${+t.repeat===v?' selected':''}>${l}</option>`).join('')}</select>
+ <button class="btn" data-a="eSave" data-id="${t.id}">Speichern</button>
+ ${t.done?`<button class="btn sec" data-a="tog" data-id="${t.id}">Wieder öffnen</button>`:`<button class="btn sec" data-a="eTomorrow" data-id="${t.id}">Auf morgen verschieben</button>`}
+ <button class="btn dan" data-a="eDel" data-id="${t.id}">Eintrag löschen</button>`);
+}
+
+/* ---------- Actions ---------- */
+function onClick(e){
+ const el=e.target.closest('[data-a]');if(!el)return;const d=el.dataset,a=d.a,t=d.id&&S.tasks.find(x=>x.id===d.id);
+ switch(a){
+ case'go':closeSheet();go({tab:d.tab,cid:d.cid,sid:d.sid});break;
+ case'close':closeSheet();break;
+ case'mic':if(!dict)break;if(listening){dict.stop().catch(()=>{});break}try{dict.start().catch(err=>{listening=false;micUi();const r=String(err&&(err.message||err.code||err));toast(r.includes('not_granted')?'Mikrofon nicht freigegeben, bitte Tastatur-Mikrofon nutzen':'Diktieren gerade nicht möglich')})}catch(err){toast('Diktieren gerade nicht möglich')}break;
+ case'person':personSheet(d.sid);break;
+ case'askOk':{const v=document.getElementById('askIn')?.value;const cb=pending;closeSheet();cb&&cb(v);break}
+ case'tog':if(!t)break;{const prev=t.done,pa=t.doneAt,pi=t.items&&t.items.map(x=>({...x}));t.done=prev?null:today();t.doneAt=prev?'':hm();if(multi(t))t.items.forEach(x=>{if(prev){x.done=null;x.at=''}else if(!x.done){x.done=t.done;x.at=t.doneAt}});save();if(document.getElementById('sheet')?.dataset.kind!=='person')closeSheet();render();toast(prev?'Wieder offen':'Erledigt: '+(t.company||stu(t.studentId)?.name||''),()=>{t.done=prev;t.doneAt=pa;if(pi)t.items=pi;save();render()})}break;
+ case'itm':if(!t)break;{const x=t.items[+d.k];x.done=x.done?null:today();x.at=x.done?hm():'';syncDone(t);save();render();toast(x.done?x.name+' erledigt ('+when(x.done,x.at)+')':x.name+' wieder offen'+(t.done?'':''))}break;
+ case'edit':if(t)editTask(t);break;
+ case'eSave':if(!t)break;t.note=document.getElementById('eNote').value.trim();t.due=document.getElementById('eDue').value||t.due;t.repeat=+document.getElementById('eRep').value;const er=document.getElementById('eResp');if(er)t.studentId=er.value;save();closeSheet();render();toast('Gespeichert');break;
+ case'eTomorrow':if(!t)break;t.due=addDays(today(),1);save();closeSheet();render();toast('Auf morgen verschoben');break;
+ case'eDel':if(!t)break;{const i=S.tasks.indexOf(t);S.tasks.splice(i,1);save();closeSheet();render();toast('Eintrag gelöscht',()=>{S.tasks.splice(i,0,t);save();render()})}break;
+ case'addClass':{const i=document.getElementById('newClass'),v=i.value.trim();if(!v)return i.focus();const c={id:uid(),name:v};S.classes.push(c);save();go({tab:'klassen',cid:c.id});break}
+ case'addStudents':{const ps=parseNames(document.getElementById('newStudents').value);if(!ps.length){toast('Keine Namen erkannt');break}let k=0,u=0;ps.forEach(({name:n,co})=>{const p=getP(n,co),had=p._upd;delete p._upd;if(addMember(d.cid,p))k++;else if(had)u++});save();render();toast(k+' Namen hinzugefügt'+(u?', '+u+' Betriebe aktualisiert':''));break}
+ case'renClass':{const c=cls(d.cid);ask('Klasse umbenennen','','Speichern',v=>{if(v&&v.trim()){c.name=v.trim();save();render()}},false,c.name);break}
+ case'delClass':{const c=cls(d.cid);ask('Klasse „'+c.name+'“ löschen?','Alle Namen und Einträge dieser Klasse werden gelöscht.','Endgültig löschen',()=>{const ids=new Set(S.students.filter(s=>s.classId===c.id).map(s=>s.id));S.tasks=S.tasks.filter(t=>!ids.has(t.studentId));S.students=S.students.filter(s=>s.classId!==c.id);S.classes=S.classes.filter(x=>x!==c);save();go({tab:'klassen'})},true);break}
+ case'renStu':{const s=stu(d.sid),p=per(s.pid);ask('Name ändern','Gilt in allen Klassen und Kursen.','Speichern',v=>{if(v&&v.trim()){p.name=v.trim();syncP(p);save();render()}},false,s.name);break}
+ case'delStu':{const s=stu(d.sid),n=S.tasks.filter(t=>t.studentId===s.id).length;ask(s.name+' aus „'+(cls(s.classId)?.name||'')+'“ entfernen?','Die Person bleibt in der Gesamtliste.'+(n?' '+n+' Einträge in diesem Kurs werden gelöscht.':''),'Entfernen',()=>{S.tasks=S.tasks.filter(t=>t.studentId!==s.id);S.students=S.students.filter(x=>x!==s);save();go({tab:'klassen',cid:s.classId})},true);break}
+ case'newFor':newDraft(d.cid,d.sid,d.mode);if(!d.sid&&d.mode!=='firma')draft.sel=S.students.filter(s=>s.classId===d.cid).map(s=>s.id);if(d.mode==='firma')firmfirms();go({tab:'neu'});break;
+ case'cSort':classSort=d.v;try{localStorage.setItem('rm-sort',d.v)}catch(e){}render();break;
+ case'coEdit':coSheet(stu(d.sid));break;
+ case'coPick':document.getElementById('coIn').value=d.co;document.querySelectorAll('[data-a=coPick]').forEach(b=>b.classList.toggle('on',b===el));break;
+ case'coSave':{const s=stu(d.sid),p=per(s.pid);p.company=document.getElementById('coIn').value.trim();syncP(p);save();closeSheet();render();toast(p.company?'Betrieb gespeichert':'Betrieb entfernt');break}
+
+ case'goAll':closeSheet();go({tab:'klassen',all:1});break;
+ case'pick':pick={cid:d.cid,sel:[],q:'',from:''};sheet(`<h3>Aus Gesamtliste zuordnen</h3><p class="hint" style="margin:0">zu „${esc(cls(d.cid)?.name||'')}“</p><input id="pickQ" placeholder="Name oder Betrieb suchen" autocomplete="off" style="margin-top:10px"><div id="pickBody">${pickBody()}</div>`,'pick');break;
+ case'pkFrom':pick.from=d.cid||'';pickRefresh();break;
+ case'pkSel':{const i=pick.sel.indexOf(d.pid);i<0?pick.sel.push(d.pid):pick.sel.splice(i,1);pickRefresh();break}
+ case'pkAll':{const v=pickAvail().map(p=>p.id),all=v.length&&v.every(x=>pick.sel.includes(x));pick.sel=all?pick.sel.filter(x=>!v.includes(x)):[...new Set([...pick.sel,...v])];pickRefresh();break}
+ case'pkGo':{let k=0;pick.sel.forEach(pid=>{if(addMember(pick.cid,per(pid)))k++});save();closeSheet();go({tab:'klassen',cid:pick.cid});toast(k+(k===1?' Person':' Personen')+' zugeordnet');break}
+ case'pOpen':pSheet(d.pid);break;
+ case'pSave':{const p=per(d.pid),n=document.getElementById('pName').value.trim();if(!n){toast('Name fehlt');break}p.name=n;p.company=document.getElementById('pCo').value.trim();syncP(p);save();render();pSheet(p.id);toast('Gespeichert');break}
+ case'pTog':{const p=per(d.pid),m=S.students.find(s=>s.classId===d.cid&&s.pid===p.id);if(!m){addMember(d.cid,p);save();render();pSheet(p.id);break}const n=S.tasks.filter(t=>t.studentId===m.id).length;const rm=()=>{S.tasks=S.tasks.filter(t=>t.studentId!==m.id);S.students=S.students.filter(x=>x!==m);save();render();pSheet(p.id)};if(n)ask('Aus „'+(cls(d.cid)?.name||'')+'“ entfernen?',n+' Einträge in diesem Kurs werden gelöscht.','Entfernen',rm,true);else rm();break}
+ case'pDel':{const p=per(d.pid);ask(p.name+' ganz löschen?','Die Person verschwindet aus allen Klassen und Kursen, mit allen Einträgen.','Endgültig löschen',()=>{const ids=new Set(S.students.filter(s=>s.pid===p.id).map(s=>s.id));S.tasks=S.tasks.filter(t=>!ids.has(t.studentId));S.students=S.students.filter(s=>s.pid!==p.id);S.people=S.people.filter(x=>x!==p);save();render()},true);break}
+ case'addPeople':{const ps=parseNames(document.getElementById('newStudents').value);if(!ps.length){toast('Keine Namen erkannt');break}const b=S.people.length;ps.forEach(x=>getP(x.name,x.co));save();render();toast((S.people.length-b)+' Namen in der Gesamtliste ergänzt');break}
+ case'dMode':draft.mode=d.v;render();break;
+ case'dFirm':{const co=d.co;if(draft.firms[co])delete draft.firms[co];else{const f=firmsOf(draft.cid).find(x=>x[0]===co);if(f)draft.firms[co]=f[1][0].id}render();break}
+ case'dAllF':{const fs=firmsOf(draft.cid);if(fs.every(([co])=>draft.firms[co]))draft.firms={};else firmfirms();render();break}
+ case'dCls':draft.cid=d.cid;draft.sel=[];draft.firms={};render();break;
+ case'dAll':{const ids=S.students.filter(s=>s.classId===draft.cid).map(s=>s.id);draft.sel=ids.every(i=>draft.sel.includes(i))?[]:ids;render();break}
+ case'dSel':{const i=draft.sel.indexOf(d.sid);i<0?draft.sel.push(d.sid):draft.sel.splice(i,1);render();break}
+ case'dType':{const v=S.types[+d.i],i=draft.types.indexOf(v);i<0?draft.types.push(v):draft.types.splice(i,1);render();break}
+ case'dEditTypes':draft.editTypes=!draft.editTypes;render();break;
+ case'dDelType':{const v=S.types[+d.i],i=+d.i;S.types.splice(i,1);draft.types=draft.types.filter(x=>x!==v);save();render();toast('Vorschlag gelöscht',()=>{S.types.splice(i,0,v);save();render()});break}
+ case'dAddType':{const v=draft.custom.trim();if(!v){document.getElementById('dCustom').focus();break}if(!S.types.includes(v)){S.types.push(v);save()}if(!draft.types.includes(v))draft.types.push(v);draft.custom='';draft.editTypes=false;render();break}
+ case'dDue':draft.due=addDays(today(),+d.d);render();break;
+ case'dRep':draft.repeat=+d.v;render();break;
+ case'dSave':{const tl=draft.types.slice();if(draft.custom.trim()&&!tl.includes(draft.custom.trim()))tl.push(draft.custom.trim());const type=tl.join(', ');if(!type){toast('Bitte angeben, was vorgelegt werden soll');break}const b=uid(),fm=draft.mode==='firma';const items=fm?Object.entries(draft.firms).map(([co,sid])=>({sid,co})):draft.sel.map(sid=>({sid,co:''}));if(!items.length)break;const n=items.length;
+  items.forEach(({sid,co})=>S.tasks.push({id:uid(),batch:b,studentId:sid,company:co,type,note:draft.note.trim(),due:draft.due,repeat:draft.repeat,created:today(),done:null,items:tl.length>1?tl.map(n=>({name:n,done:null})):undefined}));
+  save();draft=null;go({tab:'heute'});toast(n+(n===1?' Eintrag':' Einträge')+' angelegt');break}
+ case'purge':ask('Alte Einträge löschen?','Erledigte Einträge, die älter als 30 Tage sind, werden entfernt.','Löschen',()=>{S.tasks=S.tasks.filter(t=>!t.done||diff(today(),t.done)<=30);save();render()},true);break;
+ case'delType':S.types.splice(+d.i,1);save();render();break;
+ case'addType':{const i=document.getElementById('newType'),v=i.value.trim();if(v&&!S.types.includes(v)){S.types.push(v);save();render()}break}
+ case'export':exportData();break;
+ case'import':importDlg();break;
+ case'imFile':document.getElementById('imF').click();break;
+ case'imGo':doImport(document.getElementById('imT').value);break;
+ case'copyBk':{S.lastBackup=today();save();const v=document.getElementById('bk').value;navigator.clipboard?.writeText(v).then(()=>toast('Kopiert. In Notizen oder Dateien einfügen.'),()=>{document.getElementById('bk').select();toast('Text markiert, bitte kopieren')});break}
+ case'dlBk':download();break;
+ case'wipe':ask('Wirklich alle Daten löschen?','Klassen, Namen und Einträge sind danach weg. Vorher ein Backup machen!','Alles löschen',()=>{S=blank();save();draft=null;go({tab:'heute'})},true);break;
+ }
+}
+function bkText(){return JSON.stringify(S)}
+function exportData(){sheet(`<h3>Backup</h3><p class="hint">Kopiere den Text und speichere ihn z. B. in der Dateien-App oder in Notizen. Zum Wiederherstellen fügst du ihn unter „Backup einspielen“ ein.</p><textarea id="bk" readonly>${esc(bkText())}</textarea><button class="btn" data-a="dlBk">Als Datei sichern (z. B. in iCloud Drive)</button><button class="btn sec" data-a="copyBk">Text kopieren</button><button class="btn sec" data-a="close">Schließen</button>`)}
+function download(){S.lastBackup=today();save();try{const f=new File([bkText()],'rueckmeldungen-backup-'+today()+'.json',{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(()=>{});return}const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();toast('Datei wird gespeichert')}catch(e){toast('Speichern als Datei hier nicht möglich, bitte kopieren')}}
+function importDlg(){sheet(`<h3>Backup einspielen</h3><p class="hint">Ersetzt alle aktuellen Daten. Füge den Backup-Text ein oder wähle die Datei.</p><textarea id="imT" placeholder="Backup-Text hier einfügen"></textarea><input type="file" id="imF" accept=".json,application/json" hidden><button class="btn sec" data-a="imFile">Datei wählen</button><button class="btn" data-a="imGo">Einspielen</button><button class="btn sec" data-a="close">Abbrechen</button>`);
+ document.getElementById('imF').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById('imT').value=r.result};r.readAsText(f)})}
+function doImport(txt){try{const d=JSON.parse(txt);if(!Array.isArray(d.classes)||!Array.isArray(d.students)||!Array.isArray(d.tasks))throw 0;S=migrate(Object.assign(blank(),d));save();closeSheet();draft=null;go({tab:'heute'});toast('Backup eingespielt')}catch(e){toast('Das ist kein gültiges Backup')}}
+
+document.addEventListener('click',e=>{if(e.target.closest('#sheet'))return;const nb=e.target.closest('nav button');if(nb){if(nb.dataset.tab==='neu'&&!draft)newDraft();go({tab:nb.dataset.tab});return}onClick(e)});
+document.getElementById('main').addEventListener('change',e=>{const co=e.target.dataset&&e.target.dataset.resp;if(draft&&co!=null){draft.firms[co]=e.target.value}});
+document.getElementById('main').addEventListener('input',e=>{if(e.target.id==='newStudents'){nsPreview();return}if(e.target.id==='allQ'){document.getElementById('allList').innerHTML=allList(e.target.value);return}if(!draft)return;if(e.target.id==='dCustom'){draft.custom=e.target.value}else if(e.target.id==='dNote')draft.note=e.target.value;else if(e.target.id==='dDue'&&e.target.value){draft.due=e.target.value;render()}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newClass')onClick({target:document.querySelector('[data-a=addClass]')});if(e.key==='Enter'&&e.target.id==='dCustom')onClick({target:document.querySelector('[data-a=dAddType]')});if(e.key==='Enter'&&e.target.id==='newType')onClick({target:document.querySelector('[data-a=addType]')});if(e.key==='Escape')closeSheet()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('sheet'))render()});
+render();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+idbGet().then(j=>{if(!j)return;try{const d=migrate(Object.assign(blank(),JSON.parse(j)));const has=x=>x.classes.length+x.people.length+x.tasks.length;if(has(d)>has(S)&&!has(S)){S=d;try{localStorage.setItem(KEY,j)}catch(e){}render();toast('Daten aus Zweitspeicher wiederhergestellt')}else if(has(S)&&!has(d))idbPut(JSON.stringify(S))}catch(e){}});
+}
+</script>
+</body>
+</html>
