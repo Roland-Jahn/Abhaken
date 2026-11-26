@@ -111,10 +111,10 @@ details.cg{margin-bottom:8px}details.cg summary{display:flex;align-items:center;
 const KEY='rueckmeldungen-v1';
 const TYPES=['Unterschrift','Zettel / Formular','Rückmeldung','Krankmeldung','Attest','Berichtsheft'];
 const REP=[[0,'einmalig'],[1,'täglich'],[2,'alle 2 Tage'],[3,'alle 3 Tage'],[7,'wöchentlich']];
-const blank=()=>({classes:[],people:[],students:[],types:TYPES.slice(),tasks:[]});
+const blank=()=>({classes:[],firms:[],people:[],students:[],types:TYPES.slice(),tasks:[]});
 let S=load(),view={tab:'heute'},draft=null,toastT=null,classSort=(()=>{try{return localStorage.getItem('rm-sort')||'name'}catch(e){return'name'}})();
 
-function migrate(d){d.people=Array.isArray(d.people)?d.people:[];d.students.forEach(st=>{if(st.pid&&d.people.some(p=>p.id===st.pid))return;let p=d.people.find(p=>p.name.toLowerCase()===st.name.toLowerCase());if(!p){p={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:st.name,company:st.company||''};d.people.push(p)}else if(!p.company&&st.company)p.company=st.company;st.pid=p.id});return d}
+function migrate(d){d.people=Array.isArray(d.people)?d.people:[];d.firms=Array.isArray(d.firms)?d.firms:[];d.students.forEach(st=>{if(st.pid&&d.people.some(p=>p.id===st.pid))return;let p=d.people.find(p=>p.name.toLowerCase()===st.name.toLowerCase());if(!p){p={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name:st.name,company:st.company||''};d.people.push(p)}else if(!p.company&&st.company)p.company=st.company;st.pid=p.id});return d}
 function load(){try{const r=localStorage.getItem(KEY);if(r)return migrate(Object.assign(blank(),JSON.parse(r)));}catch(e){}return blank();}
 let warned=false;
 function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('rueckmeldungen',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
@@ -144,6 +144,7 @@ const syncP=p=>S.students.filter(x=>x.pid===p.id).forEach(x=>{x.name=p.name;x.co
 function getP(name,co){let p=S.people.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!p){p={id:uid(),name,company:co||''};S.people.push(p)}else if(co&&p.company!==co){p.company=co;syncP(p);p._upd=1}return p}
 function addMember(cid,p){if(!p||S.students.some(s=>s.classId===cid&&s.pid===p.id))return false;S.students.push({id:uid(),classId:cid,name:p.name,company:p.company||'',pid:p.id});return true}
 const memberOf=pid=>S.students.filter(s=>s.pid===pid).map(s=>cls(s.classId)).filter(Boolean).sort(byName);
+const allCos=()=>[...new Set([...(S.firms||[]),...S.people.map(x=>(x.company||'').trim())].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
 const firmsOf=cid=>{const m=new Map();S.students.filter(s=>s.classId===cid&&(s.company||'').trim()).sort(byName).forEach(s=>{const k=s.company.trim();if(!m.has(k))m.set(k,[]);m.get(k).push(s)});return[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'de'))};
 const repLabel=r=>(REP.find(x=>x[0]===+r)||[0,'alle '+r+' Tage'])[1];
 
@@ -228,7 +229,7 @@ function allList(q){q=(q||'').toLowerCase();const inC=pid=>S.students.some(s=>s.
 function allChips(){const n=S.people.filter(p=>!S.students.some(s=>s.pid===p.id)).length;return`<div class="chips" style="margin:10px 0"><button class="chip${!allFrom?' on':''}" data-a="allFrom" data-v="">Alle</button>${S.classes.slice().sort(byName).map(c=>`<button class="chip${allFrom===c.id?' on':''}" data-a="allFrom" data-v="${c.id}">${esc(c.name)}</button>`).join('')}<button class="chip${allFrom==='none'?' on':''}" data-a="allFrom" data-v="none">In keinem Kurs (${n})</button></div>`}
 function vAlle(){return`<p class="hint">Jeder Name steht hier nur einmal. Name und Betrieb gelten in allen Klassen und Kursen. Tippe auf einen Namen, um ihn Kursen zuzuordnen.</p><input id="allQ" placeholder="Name oder Betrieb suchen" autocomplete="off" value="${esc(allQv)}"><div id="allChips">${allChips()}</div><div id="allList">${allList(allQv)}</div>
  <h2>Namen nur in die Gesamtliste aufnehmen</h2><button class="btn" data-a="impFile" style="margin:0 0 10px">Liste aus Datei laden (Excel, CSV)</button><textarea id="newStudents" placeholder="Firma Bosch&#10;Anna Becker&#10;Ben Schmidt"></textarea>${micBtn()}<div id="nsPrev"></div><button class="btn sec" data-a="addPeople" id="nsBtn">Namen übernehmen</button>`}
-function pSheet(pid){const p=per(pid);if(!p){closeSheet();return}const all=[...new Set(S.people.map(x=>(x.company||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+function pSheet(pid){const p=per(pid);if(!p){closeSheet();return}const all=allCos();
  sheet(`<h3>${esc(p.name)}</h3><div class="lab">Name</div><input id="pName" value="${esc(p.name)}" autocomplete="off"><div class="lab">Betrieb</div><input id="pCo" list="pCoL" value="${esc(p.company||'')}" autocomplete="off"><datalist id="pCoL">${all.map(c=>`<option value="${esc(c)}">`).join('')}</datalist><button class="btn" data-a="pSave" data-pid="${p.id}">Speichern</button>
  <div class="lab">In diesen Klassen und Kursen (antippen zum Zuordnen oder Entfernen)</div><div class="chips">${S.classes.slice().sort(byName).map(c=>{const on=S.students.some(s=>s.classId===c.id&&s.pid===p.id);return`<button class="chip${on?' on':''}" data-a="pTog" data-pid="${p.id}" data-cid="${c.id}">${on?'✓ ':''}${esc(c.name)}</button>`}).join('')||'<span class="hint">Noch keine Klasse angelegt.</span>'}</div>
  <button class="btn dan" data-a="pDel" data-pid="${p.id}" style="margin-top:20px">Ganz löschen</button><button class="btn sec" data-a="close">Schließen</button>`,'p')}
@@ -312,7 +313,7 @@ function vSchueler(s){
  <h2>Person</h2><button class="btn sec" data-a="coEdit" data-sid="${s.id}">${s.company?'Betrieb ändern':'Betrieb zuordnen'}</button><button class="btn sec" data-a="renStu" data-sid="${s.id}">Umbenennen</button><button class="btn sec" data-a="pOpen" data-pid="${s.pid}">Weitere Kurse zuordnen</button><button class="btn dan" data-a="delStu" data-sid="${s.id}">Aus diesem Kurs entfernen</button>`;
 }
 function coSheet(s){
- const all=[...new Set(S.students.map(x=>(x.company||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+ const all=allCos();
  const own=firmsOf(s.classId).map(f=>f[0]);
  sheet(`<h3>Betrieb von ${esc(s.name)}</h3>${own.length?`<div class="lab">Betriebe in dieser Klasse</div><div class="chips">${own.map(co=>`<button class="chip${co===s.company?' on':''}" data-a="coPick" data-co="${esc(co)}">${esc(co)}</button>`).join('')}</div>`:''}
  <div class="lab">Betrieb</div><input id="coIn" list="coList" value="${esc(s.company||'')}" placeholder="z. B. Bosch Rexroth" autocomplete="off"><datalist id="coList">${all.map(co=>`<option value="${esc(co)}">`).join('')}</datalist>
@@ -351,7 +352,10 @@ function vErledigt(){
  return`<p class="hint">Tippe auf ✓, um einen Eintrag wieder zu öffnen.</p><div class="card">${dn.slice(0,150).map(t=>taskRow(t,true)).join('')}</div>${old?`<button class="btn dan" data-a="purge">${old} Einträge älter als 30 Tage löschen</button>`:''}`;
 }
 function vMehr(){
- return`<h2>Arten von Rückmeldungen</h2><div class="card">${S.types.map((t,i)=>`<div class="row"><div class="grow">${esc(t)}</div><button class="mo" aria-label="entfernen" data-a="delType" data-i="${i}">✕</button></div>`).join('')||'<div class="empty">Keine Arten.</div>'}</div>
+ const cos=allCos();
+ return`<h2>Betriebe (${cos.length})</h2><p class="hint" style="margin-top:0">Antippen zum Umbenennen. Löschen entfernt den Betrieb auch bei allen zugeordneten Lernenden.</p><div class="card">${cos.map(co=>{const n=S.people.filter(p=>(p.company||'').trim()===co).length;return`<div class="row"><div class="grow tap" data-a="renFirm" data-co="${esc(co)}"><div class="t">${esc(co)}</div><div class="s">${n?n+(n===1?' Person':' Personen'):'noch niemand zugeordnet'}</div></div><button class="mo red" aria-label="${esc(co)} löschen" data-a="delFirm" data-co="${esc(co)}">✕</button></div>`}).join('')||'<div class="empty">Noch keine Betriebe.</div>'}</div>
+ <div class="inl" style="margin-top:8px"><input id="newFirm" placeholder="Neuer Betrieb, z. B. Bosch Rexroth" autocomplete="off"><button class="btn" data-a="addFirm">+</button></div>
+ <h2>Arten von Rückmeldungen</h2><div class="card">${S.types.map((t,i)=>`<div class="row"><div class="grow">${esc(t)}</div><button class="mo" aria-label="entfernen" data-a="delType" data-i="${i}">✕</button></div>`).join('')||'<div class="empty">Keine Arten.</div>'}</div>
  <div class="inl" style="margin-top:8px"><input id="newType" placeholder="Neue Art, z. B. Einverständniserklärung" autocomplete="off"><button class="btn" data-a="addType">+</button></div>
  <h2>Datensicherung</h2><p class="hint">Alle Daten liegen nur auf diesem Gerät, doppelt gespeichert. App immer über das Home-Symbol öffnen und das Symbol nicht löschen. Mach regelmäßig ein Backup.${S.lastBackup?" Letztes Backup: "+esc(fmt(S.lastBackup))+".":" Noch kein Backup gemacht."}</p>
  <button class="btn sec" data-a="export">Backup erstellen</button><button class="btn sec" data-a="import">Backup einspielen</button>
@@ -457,6 +461,11 @@ function onClick(e){
  case'pQuickDel':{const p=per(d.pid);if(!p)break;const ids=new Set(S.students.filter(s=>s.pid===p.id).map(s=>s.id)),nT=S.tasks.filter(t=>ids.has(t.studentId)&&!t.done).length;
   const doDel=()=>{const snap={people:S.people.slice(),students:S.students.slice(),tasks:S.tasks.slice()};S.tasks=S.tasks.filter(t=>!ids.has(t.studentId));S.students=S.students.filter(s=>s.pid!==p.id);S.people=S.people.filter(x=>x!==p);save();render();toast(p.name+' gelöscht',()=>{S.people=snap.people;S.students=snap.students;S.tasks=snap.tasks;save();render()})};
   if(nT)ask(p.name+' löschen?',nT+' offene Einträge dieser Person werden mit gelöscht.','Löschen',doDel,true);else doDel();break}
+ case'addFirm':{const i=document.getElementById('newFirm'),v=i.value.trim();if(!v){i.focus();break}if(allCos().some(x=>x.toLowerCase()===v.toLowerCase())){toast('Betrieb gibt es schon');break}S.firms.push(v);save();render();toast('Betrieb angelegt');break}
+ case'delFirm':{const co=d.co,snap={firms:S.firms.slice(),people:S.people.map(p=>({...p})),students:S.students.map(x=>({...x}))},ps=S.people.filter(p=>(p.company||'').trim()===co);
+  const doDel=()=>{S.firms=S.firms.filter(x=>x!==co);ps.forEach(p=>{p.company='';syncP(p)});save();render();toast(co+' gelöscht',()=>{S.firms=snap.firms;S.people=snap.people;S.students=snap.students;save();render()})};
+  if(ps.length)ask(co+' löschen?',ps.length+(ps.length===1?' Person ist':' Personen sind')+' diesem Betrieb zugeordnet und stehen danach ohne Betrieb da. Offene Einträge pro Betrieb bleiben erhalten.','Löschen',doDel,true);else doDel();break}
+ case'renFirm':{const co=d.co;ask('Betrieb umbenennen','Gilt für alle zugeordneten Lernenden.','Speichern',v=>{v=(v||'').trim();if(!v||v===co)return;S.firms=S.firms.filter(x=>x!==co);if(!S.firms.includes(v))S.firms.push(v);S.people.filter(p=>(p.company||'').trim()===co).forEach(p=>{p.company=v;syncP(p)});S.tasks.forEach(t=>{if(t.company===co)t.company=v});save();render()},false,co);break}
  case'pDel':{const p=per(d.pid);ask(p.name+' ganz löschen?','Die Person verschwindet aus allen Klassen und Kursen, mit allen Einträgen.','Endgültig löschen',()=>{const ids=new Set(S.students.filter(s=>s.pid===p.id).map(s=>s.id));S.tasks=S.tasks.filter(t=>!ids.has(t.studentId));S.students=S.students.filter(s=>s.pid!==p.id);S.people=S.people.filter(x=>x!==p);save();render()},true);break}
  case'addPeople':{const ps=parseNames(document.getElementById('newStudents').value);if(!ps.length){toast('Keine Namen erkannt');break}const b=S.people.length;ps.forEach(x=>getP(x.name,x.co));save();render();toast((S.people.length-b)+' Namen in der Gesamtliste ergänzt');break}
  case'dMode':draft.mode=d.v;render();break;
@@ -496,7 +505,7 @@ function doImport(txt){try{const d=JSON.parse(txt);if(!Array.isArray(d.classes)|
 document.addEventListener('click',e=>{if(e.target.closest('#sheet'))return;const nb=e.target.closest('nav button');if(nb){if(nb.dataset.tab==='neu'&&!draft)newDraft();go({tab:nb.dataset.tab});return}onClick(e)});
 document.getElementById('main').addEventListener('change',e=>{const co=e.target.dataset&&e.target.dataset.resp;if(draft&&co!=null){draft.firms[co]=e.target.value}});
 document.getElementById('main').addEventListener('input',e=>{if(e.target.id==='newStudents'){nsPreview();return}if(e.target.id==='allQ'){allQv=e.target.value;document.getElementById('allList').innerHTML=allList(allQv);return}if(!draft)return;if(e.target.id==='dCustom'){draft.custom=e.target.value}else if(e.target.id==='dNote')draft.note=e.target.value;else if(e.target.id==='dDue'&&e.target.value){draft.due=e.target.value;render()}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newClass')onClick({target:document.querySelector('[data-a=addClass]')});if(e.key==='Enter'&&e.target.id==='dCustom')onClick({target:document.querySelector('[data-a=dAddType]')});if(e.key==='Enter'&&e.target.id==='newType')onClick({target:document.querySelector('[data-a=addType]')});if(e.key==='Escape')closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='newClass')onClick({target:document.querySelector('[data-a=addClass]')});if(e.key==='Enter'&&e.target.id==='dCustom')onClick({target:document.querySelector('[data-a=dAddType]')});if(e.key==='Enter'&&e.target.id==='newFirm')onClick({target:document.querySelector('[data-a=addFirm]')});if(e.key==='Enter'&&e.target.id==='newType')onClick({target:document.querySelector('[data-a=addType]')});if(e.key==='Escape')closeSheet()});
 document.addEventListener('toggle',e=>{const t=e.target;if(t.classList&&t.classList.contains('cg')){t.open?openCls.add(t.dataset.cid):openCls.delete(t.dataset.cid)}},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('sheet'))render()});
 render();
